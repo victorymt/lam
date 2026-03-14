@@ -91,18 +91,21 @@ typedef struct CE {
     Env env;
 } Closure;
 
+// closure_x :: Closure -> char *
 char *closure_x(Closure closure) {
-
+    return NULL;
 }
-
+// closure_body :: Closure -> Exp *
 Exp *closure_body(Closure closure) {
-
+    return NULL;
 }
 
+// closure_env :: Closure -> Env *
 Env *closure_env (Closure closure) {
-
+    return NULL;
 }
 
+// Close :: char * -> Exp * -> Env -> Closure
 Closure Close(char *arg, Exp *body, Env env) {
     Closure ce;
     ce.x = strdup(arg);
@@ -115,25 +118,24 @@ typedef struct {
     int type; // INT, CLOSURE
     union u2 {
 	int num;
-	Closure *closure;
+	Closure closure;
     } as;
 } RESULT;
 
+// interpreter :: Exp -> Env -> RESULT
 RESULT interpreter(Exp exp, Env env) {
     switch (exp.type) {
     case INT:
 	return (RESULT){INT, exp.as.num};
-	break;
     case STR:
 	int val = lookup(exp.as.str, env);
 	return (RESULT){INT, val};
-	break;
     case LAMBDA:
 	RESULT rc;
 	rc.type = CLOSURE;
+	// Close :: char * -> Exp * -> Env -> Closure
 	rc.as.closure = Close(exp.as.lambda->arg, exp.as.lambda->body, env);
 	return rc;
-	break;
     case THREE:
 	char *opt = exp.as.three->opt;
 	Exp *e1 = exp.as.three->b1;
@@ -165,7 +167,20 @@ RESULT interpreter(Exp exp, Env env) {
 	}
 	return (RESULT){INT, 0};
     case APPLY:
-	RESULT close_fun = interpreter(exp.as.apply->fun, env);
+	// interpreter :: Exp -> Env -> RESULT
+	//
+	// typedef struct EXP {
+	    //     int type; // INT STR LAMBDA THREE APPLY
+	    //     union u {
+		// 	int num;
+		//         char *str;
+		//         LAMBDA_EXP *lambda;
+		//         THREE_EXP *three;
+		//         APPLY_EXP *apply;
+		//     } as;
+		// } Exp;
+		
+	RESULT close_fun = interpreter(exp.as.apply->fun, env); // 这里不对，fun 是个 LAMBDA_EXP 我不知道我说的对不对
 	RESULT ebody = interpreter(*(exp.as.apply->body), env);
 	
 	char *x = closure_x (close_fun);
@@ -178,6 +193,7 @@ RESULT interpreter(Exp exp, Env env) {
 	break;
     }
 }
+
 int main() {
 
     return 0;
