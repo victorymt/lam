@@ -1,3 +1,4 @@
+// 我觉得可以不要 BODY_EXP，直接用 Exp 代替就可以了，就是使用其中的一部分
 #include <stdio.h>
 
 enum type { INT, STR, LAMBDA, THREE, APPLY, CLOSURE};
@@ -5,28 +6,18 @@ enum type { INT, STR, LAMBDA, THREE, APPLY, CLOSURE};
 
 typedef struct {
     char *opt; // + - * /
-    BODY_EXP *b1;
-    BODY_EXP *b2;
+    Exp *b1;
+    Exp *b2;
 } THREE_EXP;
 
 typedef struct {
     LAMBDA_EXP *fun;
-    BODY_EXP *body;
+    Exp *body;
 } APPLY_EXP;
 
 typedef struct {
-    int type;
-    union as {
-	int num;
-	char *str;
-	THREE *three;
-	APPLY_EXP *apply;
-    }
-} BODY_EXP;
-
-typedef struct {
-    int *arg;
-    BODY_EXP *body;
+    char *arg;
+    Exp *body;
 } LAMBDA_EXP;
 
 typedef struct {
@@ -62,12 +53,9 @@ RESULT interpreter(Exp exp, Env env) {
 	break;
     case THREE:
 	char *opt = exp.as.three->opt;
-	BODY_EXP *b1 = exp.as.three->b1;
-	BODY_EXP *b2 = exp.as.three->b2;
+	Exp *e1 = exp.as.three->b1;
+	Exp *e2 = exp.as.three->b2;
 	
-	Exp *e1 = Body2Exp(b1);
-	Exp *e2 = Body2Exp(b2);
-
 	RESULT v1 = interpreter(*e1, env);
 	RESULT v2 = interpreter(*e2, env);
 
