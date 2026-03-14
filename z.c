@@ -1,8 +1,57 @@
-// 我觉得可以不要 BODY_EXP，直接用 Exp 代替就可以了，就是使用其中的一部分
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#define MAXSIZE 1024
 
 enum type { INT, STR, LAMBDA, THREE, APPLY, CLOSURE};
 
+typedef struct {
+    char *var;
+    int val;
+} Pair;
+
+// [var val][var val][][]
+
+typedef struct {
+    Pair p[MAXSIZE];
+    size_t length;
+    size_t capacity;
+} Env;
+
+int empty_envp(Env env) {
+    return env.length == 0;
+}
+
+Env init_env() {
+    Env env;
+    memset(env.p, 0, sizeof (Pair) * MAXSIZE);
+    env.length = 0;
+    env.capacity = MAXSIZE;
+    return env;
+}
+
+Env extend_env(char *var, int val, Env env) {
+    Pair p;
+    p.var = strdup(var);
+    p.val = val;
+    Env new_env = env;
+    new_env.p[new_env.length] = p;
+    new_env.length++;
+    return new_env;
+}
+
+int lookup(char *var, Env env) {
+    int i;
+    for (i = 0; i < env.length; i++) {
+	if (strcmp(env.p[i].var, var) == 0) {
+	    return env.p[i].val;
+	}
+    }
+}
+
+typedef struct EXP Exp;
+typedef struct AE APPLY_EXP;
+typedef struct LE LAMBDA_EXP;
 
 typedef struct {
     char *opt; // + - * /
@@ -10,33 +59,47 @@ typedef struct {
     Exp *b2;
 } THREE_EXP;
 
-typedef struct {
+typedef struct AE{
     LAMBDA_EXP *fun;
     Exp *body;
 } APPLY_EXP;
 
-typedef struct {
+typedef struct LE {
     char *arg;
     Exp *body;
 } LAMBDA_EXP;
 
-typedef struct {
+typedef struct EXP {
     int type; // INT STR LAMBDA THREE APPLY
-    union as {
+    union u {
 	int num;
         char *str;
         LAMBDA_EXP *lambda;
         THREE_EXP *three;
         APPLY_EXP *apply;
-    }
+    } as;
 } Exp;
+
+typedef struct CE {
+    char *x;
+    Exp *body;
+    Env env;
+} Closure;
+
+Closure Close(char *arg, Exp *body, Env env) {
+    Closure ce;
+    ce.x = strdup(arg);
+    ce.body = body;
+    ce.env = env;
+    return ce;
+}
 
 typedef struct {
     int type; // INT, CLOSURE
-    union as {
+    union u2 {
 	int num;
-	CLOSURE *closure;
-    }
+	Closure *closure;
+    } as;
 } RESULT;
 
 RESULT interpreter(Exp exp, Env env) {
@@ -59,25 +122,41 @@ RESULT interpreter(Exp exp, Env env) {
 	RESULT v1 = interpreter(*e1, env);
 	RESULT v2 = interpreter(*e2, env);
 
-	char op = str2char(opt);
+	char op = opt[0];
+	RESULT r;
 	switch (op) {
 	case '+':
-	    return (RESULT){INT, v1.as.num + v2.as.num};
+	    r.type = INT;
+	    r.as.num = v1.as.num + v2.as.num;
+	    return r;
 
 	case '-':
-	    return (RETURN){INT, v1.as.num - v2.as.num};
+	    r.type = INT;
+	    r.as.num = v1.as.num - v2.as.num;
+	    return r;
 	case '*':
-	    return (RETURN){INT, v1.as.num * v2.as.num};
+	    r.type = INT;
+	    r.as.num = v1.as.num * v2.as.num;
+	    return r;
 	case '/':
-	    return (RETURN){INT, (int)(v1.as.num / v2.as.num)}
+	    r.type = INT;
+	    r.as.num = (int)(v1.as.num / v2.as.num);
+	    return r;
 	}
-	return;
+	return (RESULT){INT, 0};
     case APPLY:
-	// RESULT fun = interpreter(exp.as.apply->fun)    过一会再看
+	RESULT close_fun = interpreter(exp.as.apply->fun, env);
+	Exp ebody = interpreter(exp.as.apply->body, env);
 	
+	char *x = closure_x (close_fun);
+	Exp *body = closure_body (close_fun);
+	Env *env = closure_env (close_fun);
+	
+	Env new_env = extend_env(x, ebody, *env);
+	return interpreter(body, new_env);
+    default:
+	break;
     }
-
-	
 }
 int main() {
 
