@@ -40,6 +40,10 @@ Env extend_env(char *var, int val, Env env) {
     return new_env;
 }
 
+void Error(char *p) {
+    fprintf(stderr, p);
+}
+
 int lookup(char *var, Env env) {
     int i;
     for (i = 0; i < env.length; i++) {
@@ -47,6 +51,7 @@ int lookup(char *var, Env env) {
 	    return env.p[i].val;
 	}
     }
+    Error("unknown symbol!");
 }
 
 typedef struct EXP Exp;
@@ -86,6 +91,18 @@ typedef struct CE {
     Env env;
 } Closure;
 
+char *closure_x(Closure closure) {
+
+}
+
+Exp *closure_body(Closure closure) {
+
+}
+
+Env *closure_env (Closure closure) {
+
+}
+
 Closure Close(char *arg, Exp *body, Env env) {
     Closure ce;
     ce.x = strdup(arg);
@@ -93,7 +110,7 @@ Closure Close(char *arg, Exp *body, Env env) {
     ce.env = env;
     return ce;
 }
-
+ 
 typedef struct {
     int type; // INT, CLOSURE
     union u2 {
@@ -108,11 +125,14 @@ RESULT interpreter(Exp exp, Env env) {
 	return (RESULT){INT, exp.as.num};
 	break;
     case STR:
-	int r = lookup(exp.as.str, env);
-	return (RESULT){INT, r};
+	int val = lookup(exp.as.str, env);
+	return (RESULT){INT, val};
 	break;
     case LAMBDA:
-	return (RESULT){CLOSURE, Close(exp.as.lambda->arg, exp.as.lambda->body, env)};
+	RESULT rc;
+	rc.type = CLOSURE;
+	rc.as.closure = Close(exp.as.lambda->arg, exp.as.lambda->body, env);
+	return rc;
 	break;
     case THREE:
 	char *opt = exp.as.three->opt;
@@ -146,13 +166,13 @@ RESULT interpreter(Exp exp, Env env) {
 	return (RESULT){INT, 0};
     case APPLY:
 	RESULT close_fun = interpreter(exp.as.apply->fun, env);
-	Exp ebody = interpreter(exp.as.apply->body, env);
+	RESULT ebody = interpreter(*(exp.as.apply->body), env);
 	
 	char *x = closure_x (close_fun);
 	Exp *body = closure_body (close_fun);
-	Env *env = closure_env (close_fun);
+	Env *oenv = closure_env (close_fun);
 	
-	Env new_env = extend_env(x, ebody, *env);
+	Env new_env = extend_env(x, ebody, *oenv);
 	return interpreter(body, new_env);
     default:
 	break;
