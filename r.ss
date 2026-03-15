@@ -55,3 +55,8 @@
 
 (interpreter '(+ 1 2) '())
 (interpreter '((lambda (x) (+ x 1)) 3) '())
+(interpreter '(((lambda (x)
+		  (lambda (y)
+		    (+ x y)))
+		1)
+	       2) '())

@@ -68,5 +68,6 @@ def interpreter(exp, env):
             return interpreter (body, new_env)
             
 r = interpreter([["lambda", ["x"], ["+", "x", 1]], 2], [])
+r1 = interpreter([[["lambda", ["x"], ["lambda", ["y"], ["+", "x", "y"]]], 1], 2], [])
 print (r)
                     

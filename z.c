@@ -243,18 +243,22 @@ Exp *calc(char *opt, Exp *n1, Exp *n2) {
     return c;
 }
 
-// lambda :: char * -> Exp -> LAMBDA_EXP*
-LAMBDA_EXP* lambda(char *x, Exp *body) {
+// lambda :: char * -> Exp -> Exp*
+// 我现在觉得 lambda 的返回值应该是 Exp，要不然没法做嵌套
+Exp* lambda(char *x, Exp *body) {
     LAMBDA_EXP *le = malloc (sizeof (LAMBDA_EXP));
     le->arg = strdup(x);
     le->body = body;
-    return le;
+    Exp *e = malloc (sizeof (Exp));
+    e->type = LAMBDA;
+    e->as.lambda = le;
+    return e;
 }
 
-// apply :: LAMBDA_EXP -> Exp* -> Exp*
-Exp* apply(LAMBDA_EXP *lamb, Exp *body) {
+// apply :: Exp* -> Exp* -> Exp*
+Exp* apply(Exp *lamb, Exp *body) {
     APPLY_EXP *ae = malloc(sizeof (APPLY_EXP));
-    ae->fun = lamb;
+    ae->fun = lamb->as.lambda;
     ae->body = body;
     Exp *a = malloc (sizeof (Exp));
     a->type = APPLY;
@@ -288,9 +292,11 @@ int main() {
 
     Exp *e = calc("+", num(1), num(2));
     Exp *e1 = apply(lambda("x", calc("+", str("x"), num(1))), num(1));
+
+    Exp *e2 = apply(apply(lambda("x", lambda("y", calc("+", str("x"), str("y")))), num(1)), num(2)); // 这个现在好像还不支持嵌套 lambda
     Env ne;
     ne = init_env();
-    RESULT re = interpreter(*e1, ne);
+    RESULT re = interpreter(*e2, ne);
     int result = result2int(re);
     printf("%d", result);
     return 0;
