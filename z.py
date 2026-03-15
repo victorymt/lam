@@ -3,8 +3,6 @@
 # [+, x, 1]
 # 1 | 2 ..
 
-import ast
-
 def Closure(x, body, env):
     return [x, body, env]
 

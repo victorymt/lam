@@ -194,23 +194,34 @@ RESULT interpreter(Exp exp, Env env) {
 	}
 	return (RESULT){INT, 0};
     case APPLY:
-	// 先把 apply 的函数变成闭包
-	// 这里 exp.as.apply->fun 的类型是 LAMBDA_EXP* 不是 Exp，需要先转换
-	Exp apply_fun = lambda2exp(exp.as.apply->fun);
-	RESULT close_fun = interpreter(apply_fun, env); 
-	RESULT ebody = interpreter(*(exp.as.apply->body), env); // ebody 可能是 INT，也可能是 ClOSURE
+	/*
+    case [fun, e]:
+        fun = interpreter(fun, env)
+        arg = closure_x (fun)
+        body = closure_body (fun)
+        env = closure_env (fun)
+        new_env = extend_env (arg, interpreter (e, env), env)
+	return interpreter (body, new_env)
+	*/
 
-	// 从 RESULT 转换成 Clouse
+	// 先把 apply 的函数变成闭包
+
+	// [fun body]
+	// fun -> closure
+	Exp apply_fun = lambda2exp(exp.as.apply->fun);
+	RESULT close_fun = interpreter(apply_fun, env);
 	Closure result_ce = result2closure(close_fun);
+	
 	char *x = closure_x (result_ce);
 	Exp *body = closure_body (result_ce);
 	Env oenv = closure_env (result_ce);
-	// extend_env :: char * -> int -> Env -> Env
 
 	// 从 RESULT 转换成 int
 	// TODO 是这里的原因？导致无法嵌套 lambda?
+	RESULT ebody = interpreter(*(exp.as.apply->body), env); // ebody 可能是 INT，也可能是 ClOSURE
 	int ebody_val = result2int(ebody);
-	Env new_env = extend_env(x, ebody_val, oenv);
+	// new_env = extend_env (arg, interpreter (e, env), env) 对不上
+	Env new_env = extend_env(x, ebody_val, oenv); // 这里不对
 	return interpreter(*body, new_env);
     default:
 	assert(1 == 2);
