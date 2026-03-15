@@ -225,54 +225,56 @@ RESULT interpreter(Exp exp, Env env) {
 	Env new_env = extend_env(x, ebody_val, oenv);
 	return interpreter(*body, new_env);
     default:
-	break;
+	assert(1 == 2);
     }
 }
 
-// calc :: char * -> Exp -> Exp -> Exp
-Exp calc(char *opt, Exp n1, Exp n2) {
+// calc :: char * -> Exp* -> Exp* -> Exp
+// 当我传入的 n1 n2 是数字结构体的时候， &n1 &n2 的地址是临时的
+
+Exp *calc(char *opt, Exp *n1, Exp *n2) {
     THREE_EXP *nthree = malloc (sizeof (THREE_EXP));
     nthree->opt = opt;
-    nthree->b1 = &n1;
-    nthree->b2 = &n2;
-    Exp c;
-    c.type = THREE;
-    c.as.three = nthree;
+    nthree->b1 = n1;
+    nthree->b2 = n2;
+    Exp *c = malloc (sizeof (Exp));
+    c->type = THREE;
+    c->as.three = nthree;
     return c;
 }
 
-// lambda :: char * -> Exp -> LAMBDA_EXP
-LAMBDA_EXP lambda(char *x, Exp body) {
+// lambda :: char * -> Exp -> LAMBDA_EXP*
+LAMBDA_EXP* lambda(char *x, Exp *body) {
     LAMBDA_EXP *le = malloc (sizeof (LAMBDA_EXP));
     le->arg = strdup(x);
-    le->body = &body;
-    return *le;
+    le->body = body;
+    return le;
 }
 
-// apply :: LAMBDA_EXP -> Exp -> Exp
-Exp apply(LAMBDA_EXP lamb, Exp body) {
+// apply :: LAMBDA_EXP -> Exp* -> Exp*
+Exp* apply(LAMBDA_EXP *lamb, Exp *body) {
     APPLY_EXP *ae = malloc(sizeof (APPLY_EXP));
-    ae->fun = &lamb;
-    ae->body = &body;
-    Exp a;
-    a.type = APPLY;
-    a.as.apply = ae;
+    ae->fun = lamb;
+    ae->body = body;
+    Exp *a = malloc (sizeof (Exp));
+    a->type = APPLY;
+    a->as.apply = ae;
     return a;
 }
 
-// num :: int -> Exp
-Exp num(int n) {
-    Exp ne;
-    ne.type = INT;
-    ne.as.num = n;
+// num :: int -> Exp*
+Exp *num(int n) {
+    Exp *ne = malloc (sizeof (Exp));
+    ne->type = INT;
+    ne->as.num = n;
     return ne;
 }
 
-// str :: char* -> Exp
-Exp str(char *x) {
-    Exp s;
-    s.type = STR;
-    s.as.str = strdup(x);
+// str :: char* -> Exp*
+Exp *str(char *x) {
+    Exp *s = malloc(sizeof (Exp));
+    s->type = STR;
+    s->as.str = strdup(x);
     return s;
 }
 
@@ -284,11 +286,13 @@ int main() {
     // Exp i = num(1);
     // Exp s = str("x")
 
-    Exp e = calc("+", num(1), num(2));
+    Exp *e = calc("+", num(1), num(2));
+    Exp *e1 = apply(lambda("x", calc("+", str("x"), num(1))), num(1));
     Env ne;
     ne = init_env();
-    RESULT re = interpreter(e, ne);
+    RESULT re = interpreter(*e1, ne);
     int result = result2int(re);
     printf("%d", result);
     return 0;
 }
+
