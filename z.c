@@ -108,16 +108,16 @@ Exp lambda2exp(LAMBDA_EXP *le) {
 
 // closure_x :: Closure -> char *
 char *closure_x(Closure closure) {
-    return NULL;
+    return closure.x;
 }
 // closure_body :: Closure -> Exp *
 Exp *closure_body(Closure closure) {
-    return NULL;
+    return closure.body;
 }
 
 // closure_env :: Closure -> Env *
 Env *closure_env (Closure closure) {
-    return NULL;
+    return &(closure.env);
 }
 
 // Close :: char * -> Exp * -> Env -> Closure
@@ -229,7 +229,56 @@ RESULT interpreter(Exp exp, Env env) {
     }
 }
 
-int main() {
+// calc :: char * -> int -> int -> Exp
+Exp calc(char *opt, int n1, int n2) {
 
+}
+
+// lambda :: char * -> Exp -> Exp
+Exp lambda(char *x, Exp body) {
+
+}
+
+// apply :: LAMBDA_EXP -> Exp -> Exp
+Exp apply(LAMBDA_EXP lamb, Exp body) {
+
+}
+
+// num :: int -> Exp
+Exp num(int n) {
+
+}
+
+Exp str(char *x) {
+
+}
+
+int main() {
+    // 写一个友好的转换方式
+    // Exp c = calc("+", 1, 2);
+    // Exp p = lambda("x", calc("+", 1, 2));
+    // Exp a = apply(lambda("x", str("x")), 1);
+    // Exp i = num(1);
+    // Exp s = str("x")
+    Exp eb1;
+    eb1.type = INT;
+    eb1.as.num = 1;
+
+    Exp eb2;
+    eb2.type = INT;
+    eb2.as.num = 2;
+    THREE_EXP nthree;
+    nthree.opt = strdup("+");
+    nthree.b1 = &eb1;
+    nthree.b2 = &eb2;
+    Exp e;
+    e.type = THREE;
+    e.as.three = &nthree;
+
+    Env ne;
+    ne = init_env();
+    RESULT re = interpreter(e, ne);
+    int result = result2int(re);
+    printf("%d", result);
     return 0;
 }
