@@ -198,7 +198,7 @@ RESULT interpreter(Exp exp, Env env) {
 	// 这里 exp.as.apply->fun 的类型是 LAMBDA_EXP* 不是 Exp，需要先转换
 	Exp apply_fun = lambda2exp(exp.as.apply->fun);
 	RESULT close_fun = interpreter(apply_fun, env); 
-	RESULT ebody = interpreter(*(exp.as.apply->body), env);
+	RESULT ebody = interpreter(*(exp.as.apply->body), env); // ebody 可能是 INT，也可能是 ClOSURE
 
 	// 从 RESULT 转换成 Clouse
 	Closure result_ce = result2closure(close_fun);
@@ -241,15 +241,13 @@ Exp* lambda(char *x, Exp *body) {
 }
 
 // apply :: Exp* -> Exp* -> Exp*
-// apply 的返回值也能是一个 lambda
-// 这里的问题
 Exp* apply(Exp *lamb, Exp *body) {
     assert(lamb->type == LAMBDA);
     APPLY_EXP *ae = malloc(sizeof (APPLY_EXP));
     ae->fun = lamb->as.lambda;
     ae->body = body;
     Exp *a = malloc (sizeof (Exp));
-    a->type = APPLY;		// 这里？
+    a->type = APPLY;
     a->as.apply = ae;
     return a;
 }
@@ -284,12 +282,6 @@ int main() {
     // 原因好像是 apply 接收的默认是 lambda, 而这个是 apply
     Exp *e2 = apply(apply(lambda("x", lambda("y", calc("+", str("x"), str("y")))), num(1)), num(2)); // 这个现在好像还不支持嵌套 lambda
 
-    // 我现在需要手动构建一个 Exp，看 interpreter 是否正确
-
-    Exp *he1 = lambda("x", lambda("y", calc("+", str("x"), str("y"))));
-    Exp *he2 = apply(he1, num(1));
-    // 坏了，好像没法构造出嵌套的 lambda，在现在的数据结构下
-    //
     Env ne;
     ne = init_env();
     RESULT re = interpreter(*e2, ne);
