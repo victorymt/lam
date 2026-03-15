@@ -208,6 +208,7 @@ RESULT interpreter(Exp exp, Env env) {
 	// extend_env :: char * -> int -> Env -> Env
 
 	// 从 RESULT 转换成 int
+	// TODO 是这里的原因？导致无法嵌套 lambda?
 	int ebody_val = result2int(ebody);
 	Env new_env = extend_env(x, ebody_val, oenv);
 	return interpreter(*body, new_env);
