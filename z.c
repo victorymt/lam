@@ -194,21 +194,8 @@ RESULT interpreter(Exp exp, Env env) {
 	}
 	return (RESULT){INT, 0};
     case APPLY:
-	// interpreter :: Exp -> Env -> RESULT
-	//
-	// typedef struct EXP {
-	    //     int type; // INT STR LAMBDA THREE APPLY
-	    //     union u {
-		// 	int num;
-		//         char *str;
-		//         LAMBDA_EXP *lambda;
-		//         THREE_EXP *three;
-		//         APPLY_EXP *apply;
-		//     } as;
-		// } Exp;
-
-		// 先把 apply 的函数变成闭包
-		// 这里 exp.as.apply->fun 的类型是 LAMBDA_EXP* 不是 Exp，需要先转换
+	// 先把 apply 的函数变成闭包
+	// 这里 exp.as.apply->fun 的类型是 LAMBDA_EXP* 不是 Exp，需要先转换
 	Exp apply_fun = lambda2exp(exp.as.apply->fun);
 	RESULT close_fun = interpreter(apply_fun, env); 
 	RESULT ebody = interpreter(*(exp.as.apply->body), env);
@@ -230,8 +217,6 @@ RESULT interpreter(Exp exp, Env env) {
 }
 
 // calc :: char * -> Exp* -> Exp* -> Exp
-// 当我传入的 n1 n2 是数字结构体的时候， &n1 &n2 的地址是临时的
-
 Exp *calc(char *opt, Exp *n1, Exp *n2) {
     THREE_EXP *nthree = malloc (sizeof (THREE_EXP));
     nthree->opt = opt;
@@ -244,7 +229,6 @@ Exp *calc(char *opt, Exp *n1, Exp *n2) {
 }
 
 // lambda :: char * -> Exp -> Exp*
-// 我现在觉得 lambda 的返回值应该是 Exp，要不然没法做嵌套
 Exp* lambda(char *x, Exp *body) {
     LAMBDA_EXP *le = malloc (sizeof (LAMBDA_EXP));
     le->arg = strdup(x);
@@ -256,12 +240,15 @@ Exp* lambda(char *x, Exp *body) {
 }
 
 // apply :: Exp* -> Exp* -> Exp*
+// apply 的返回值也能是一个 lambda
+// 这里的问题
 Exp* apply(Exp *lamb, Exp *body) {
+    assert(lamb->type == LAMBDA);
     APPLY_EXP *ae = malloc(sizeof (APPLY_EXP));
     ae->fun = lamb->as.lambda;
     ae->body = body;
     Exp *a = malloc (sizeof (Exp));
-    a->type = APPLY;
+    a->type = APPLY;		// 这里？
     a->as.apply = ae;
     return a;
 }
@@ -293,7 +280,15 @@ int main() {
     Exp *e = calc("+", num(1), num(2));
     Exp *e1 = apply(lambda("x", calc("+", str("x"), num(1))), num(1));
 
+    // 原因好像是 apply 接收的默认是 lambda, 而这个是 apply
     Exp *e2 = apply(apply(lambda("x", lambda("y", calc("+", str("x"), str("y")))), num(1)), num(2)); // 这个现在好像还不支持嵌套 lambda
+
+    // 我现在需要手动构建一个 Exp，看 interpreter 是否正确
+
+    Exp *he1 = lambda("x", lambda("y", calc("+", str("x"), str("y"))));
+    Exp *he2 = apply(he1, num(1));
+    // 坏了，好像没法构造出嵌套的 lambda，在现在的数据结构下
+    //
     Env ne;
     ne = init_env();
     RESULT re = interpreter(*e2, ne);
