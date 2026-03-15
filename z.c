@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
+
 #define MAXSIZE 1024
 
 enum type { INT, STR, LAMBDA, THREE, APPLY, CLOSURE};
@@ -18,10 +20,12 @@ typedef struct {
     size_t capacity;
 } Env;
 
+// empty_envp :: Env -> int
 int empty_envp(Env env) {
     return env.length == 0;
 }
 
+// init_env :: () -> Env
 Env init_env() {
     Env env;
     memset(env.p, 0, sizeof (Pair) * MAXSIZE);
@@ -30,6 +34,7 @@ Env init_env() {
     return env;
 }
 
+// extend_env :: char * -> int -> Env -> Env
 Env extend_env(char *var, int val, Env env) {
     Pair p;
     p.var = strdup(var);
@@ -40,10 +45,12 @@ Env extend_env(char *var, int val, Env env) {
     return new_env;
 }
 
+// Error :: char * -> IO
 void Error(char *p) {
     fprintf(stderr, p);
 }
 
+// lookup :: char * -> Env -> int
 int lookup(char *var, Env env) {
     int i;
     for (i = 0; i < env.length; i++) {
@@ -91,6 +98,14 @@ typedef struct CE {
     Env env;
 } Closure;
 
+// lambda2exp :: LAMBDA_EXP* -> Exp
+Exp lambda2exp(LAMBDA_EXP *le) {
+    Exp e;
+    e.type = LAMBDA;
+    e.as.lambda = le;
+    return e;
+}
+
 // closure_x :: Closure -> char *
 char *closure_x(Closure closure) {
     return NULL;
@@ -122,6 +137,18 @@ typedef struct {
     } as;
 } RESULT;
 
+// result2closure :: RESULT -> Closure
+Closure result2closure(RESULT re) {
+    assert(re.type == CLOSURE);
+    Closure ce = re.as.closure;
+    return ce;
+}
+
+// result2int :: RESULT -> int
+int result2int(RESULT re) {
+    assert(re.type == INT);
+    return re.as.num;
+}
 // interpreter :: Exp -> Env -> RESULT
 RESULT interpreter(Exp exp, Env env) {
     switch (exp.type) {
@@ -179,16 +206,24 @@ RESULT interpreter(Exp exp, Env env) {
 		//         APPLY_EXP *apply;
 		//     } as;
 		// } Exp;
-		
-	RESULT close_fun = interpreter(exp.as.apply->fun, env); // 这里不对，fun 是个 LAMBDA_EXP 我不知道我说的对不对
+
+		// 先把 apply 的函数变成闭包
+		// 这里 exp.as.apply->fun 的类型是 LAMBDA_EXP* 不是 Exp，需要先转换
+	Exp apply_fun = lambda2exp(exp.as.apply->fun);
+	RESULT close_fun = interpreter(apply_fun, env); 
 	RESULT ebody = interpreter(*(exp.as.apply->body), env);
-	
-	char *x = closure_x (close_fun);
-	Exp *body = closure_body (close_fun);
-	Env *oenv = closure_env (close_fun);
-	
-	Env new_env = extend_env(x, ebody, *oenv);
-	return interpreter(body, new_env);
+
+	// 从 RESULT 转换成 Clouse
+	Closure result_ce = result2closure(close_fun);
+	char *x = closure_x (result_ce);
+	Exp *body = closure_body (result_ce);
+	Env *oenv = closure_env (result_ce);
+	// extend_env :: char * -> int -> Env -> Env
+
+	// 从 RESULT 转换成 int
+	int ebody_val = result2int(ebody);
+	Env new_env = extend_env(x, ebody_val, *oenv);
+	return interpreter(*body, new_env);
     default:
 	break;
     }
