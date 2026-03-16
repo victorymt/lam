@@ -313,6 +313,54 @@ Exp *str(char *x) {
 // Exp* i = num(1);
 // Exp* s = str("x")
 
+void pretty_print(Exp *e);
+void pretty_print_apply(APPLY_EXP *apply) {
+    pretty_print(apply->fun);
+    pretty_print(apply->body);
+}
+
+void pretty_print_three(THREE_EXP *e) {
+    printf("Opt: %s\n", e->opt);
+    pretty_print(e->b1);
+    pretty_print(e->b2);
+}
+
+
+void pretty_print_lambda(LAMBDA_EXP *le) {
+    printf("Arg: %s\n", le->arg);
+    pretty_print(le->body);
+}
+
+void pretty_print(Exp *e) {
+    switch (e->type) {
+    case INT:
+	printf("INT: %d\n", e->as.num);
+	break;
+    case STR:
+	printf("STR: %s\n", e->as.str);
+	break;
+    case LAMBDA:
+	pretty_print_lambda(e->as.lambda);
+	break;
+    case THREE:
+	pretty_print_three(e->as.three);
+	break;
+    case APPLY:
+	pretty_print_apply(e->as.apply);
+	break;
+    default:
+	assert(1 == 2);
+	break;
+    }
+}
+void print_closure(Closure closure) {
+    char *x = closure_x(closure);
+    Exp *body = closure_body(closure);
+    Env env = closure_env(closure);
+    printf("%s\n", x);
+    pretty_print(body);
+}
+
 int main() {
     Exp *e = calc("+", num(1), num(2));
     Exp *e1 = apply(lambda("x", calc("+", str("x"), num(1))), num(1));
@@ -322,7 +370,8 @@ int main() {
     ne = init_env();
     RESULT *re = interpreter(*e, ne);
     int result = result2int(*re);
-    printf("%d", result);
+    // printf("%d", result);
+    pretty_print(e2);
     return 0;
 }
 
