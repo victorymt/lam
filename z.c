@@ -10,7 +10,7 @@ enum type { INT, STR, LAMBDA, THREE, APPLY, CLOSURE};
 typedef struct RE RESULT;
 
 void ignore(char *str) {
-    fprintf("%s", str);
+    fprintf(stderr, "%s", str);
 }
 
 typedef struct {
@@ -77,8 +77,9 @@ typedef struct {
     Exp *b2;
 } THREE_EXP;
 
+
 typedef struct AE{
-    LAMBDA_EXP *fun;
+    Exp *fun;
     Exp *body;
 } APPLY_EXP;
 
@@ -98,6 +99,13 @@ typedef struct EXP {
     } as;
 } Exp;
 
+Exp *apply2exp(APPLY_EXP *ae) {
+    Exp *e = malloc (sizeof (Exp));
+    e->type = APPLY;
+    e->as.apply = ae;
+    return e;
+}
+
 typedef struct CE {
     char *x;
     Exp *body;
@@ -105,10 +113,10 @@ typedef struct CE {
 } Closure;
 
 // lambda2exp :: LAMBDA_EXP* -> Exp
-Exp lambda2exp(LAMBDA_EXP *le) {
-    Exp e;
-    e.type = LAMBDA;
-    e.as.lambda = le;
+Exp* lambda2exp(LAMBDA_EXP *le) {
+    Exp *e = malloc (sizeof (Exp));
+    e->type = LAMBDA;
+    e->as.lambda = le;
     return e;
 }
 
@@ -214,15 +222,16 @@ RESULT *interpreter(Exp exp, Env env) {
 
 	// [fun body]
 	// fun -> closure
-	Exp apply_fun = lambda2exp(exp.as.apply->fun);
-	RESULT *close_fun = interpreter(apply_fun, env);
+	
+	// 这里，exp.as.apply->fun 如果不是 lambda 呢，如果是 lambda ，就直接变成闭包就可以了，如果本身是一个 apply 呢，所以不应该进行转换，同时类型也不应该局限在 lambda，应该是 Exp
+	
+	RESULT *close_fun = interpreter(*(exp.as.apply->fun), env);
 	Closure result_ce = result2closure(*close_fun);
 	
 	char *x = closure_x (result_ce);
 	Exp *body = closure_body (result_ce);
 	Env oenv = closure_env (result_ce);
 
-	// 从 RESULT 转换成 int
 	// TODO 是这里的原因？导致无法嵌套 lambda?
 	RESULT *ebody = interpreter(*(exp.as.apply->body), env); // ebody 可能是 INT，也可能是 ClOSURE
 	// int ebody_val = result2int(ebody);
@@ -262,7 +271,7 @@ Exp* lambda(char *x, Exp *body) {
 Exp* apply(Exp *lamb, Exp *body) {
     if (lamb->type == LAMBDA) {
 	APPLY_EXP *ae = malloc(sizeof (APPLY_EXP));
-	ae->fun = lamb->as.lambda;
+	ae->fun = lambda2exp(lamb->as.lambda);
 	ae->body = body;
 	Exp *a = malloc (sizeof (Exp));
 	a->type = APPLY;
@@ -270,7 +279,16 @@ Exp* apply(Exp *lamb, Exp *body) {
 	return a;
     } else {
 	assert(lamb->type == APPLY);
-	ignore("IDONT KNOW");
+	// ignore("IDONT KNOW");
+	APPLY_EXP *ae = malloc (sizeof (APPLY_EXP));
+	// 充当 apply 的 fun 的是 apply 这个整体，但类型又不统一 Exp <-> APPLY_EXP
+	Exp *apply_exp = apply2exp(lamb->as.apply);
+	ae->fun = apply_exp;
+	ae->body = body;
+	Exp *a = malloc (sizeof (Exp));
+	a->type = APPLY;
+	a->as.apply = ae;
+	return a;
     }
 }
 
