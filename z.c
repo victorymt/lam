@@ -325,7 +325,6 @@ void pretty_print_three(THREE_EXP *e) {
     pretty_print(e->b2);
 }
 
-
 void pretty_print_lambda(LAMBDA_EXP *le) {
     printf("Arg: %s\n", le->arg);
     pretty_print(le->body);
@@ -366,6 +365,7 @@ int main() {
     Exp *e1 = apply(lambda("x", calc("+", str("x"), num(1))), num(1));
     Exp *e2 = apply(apply(lambda("x", lambda("y", calc("+", str("x"), str("y")))), num(1)), num(2)); 
     Exp *e3 = lambda("x", str("x"));
+
     Env ne;
     ne = init_env();
     RESULT *re = interpreter(*e, ne);
