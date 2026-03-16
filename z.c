@@ -99,6 +99,7 @@ typedef struct EXP {
     } as;
 } Exp;
 
+// apply2exp :: APPLY_EXP* -> Exp
 Exp *apply2exp(APPLY_EXP *ae) {
     Exp *e = malloc (sizeof (Exp));
     e->type = APPLY;
@@ -267,7 +268,6 @@ Exp* lambda(char *x, Exp *body) {
 }
 
 // apply :: Exp* -> Exp* -> Exp*
-// apply 的 lamb 可能接收的是另一个 apply
 Exp* apply(Exp *lamb, Exp *body) {
     if (lamb->type == LAMBDA) {
 	APPLY_EXP *ae = malloc(sizeof (APPLY_EXP));
@@ -279,9 +279,7 @@ Exp* apply(Exp *lamb, Exp *body) {
 	return a;
     } else {
 	assert(lamb->type == APPLY);
-	// ignore("IDONT KNOW");
 	APPLY_EXP *ae = malloc (sizeof (APPLY_EXP));
-	// 充当 apply 的 fun 的是 apply 这个整体，但类型又不统一 Exp <-> APPLY_EXP
 	Exp *apply_exp = apply2exp(lamb->as.apply);
 	ae->fun = apply_exp;
 	ae->body = body;
@@ -308,23 +306,21 @@ Exp *str(char *x) {
     return s;
 }
 
-int main() {
-    // 写一个友好的转换方式
-    // Exp c = calc("+", 1, 2);
-    // Exp p = lambda("x", calc("+", 1, 2));
-    // Exp a = apply(lambda("x", str("x")), 1);
-    // Exp i = num(1);
-    // Exp s = str("x")
+// 写一个友好的转换方式
+// Exp* c = calc("+", 1, 2);
+// Exp* p = lambda("x", calc("+", 1, 2));
+// Exp* a = apply(lambda("x", str("x")), 1);
+// Exp* i = num(1);
+// Exp* s = str("x")
 
+int main() {
     Exp *e = calc("+", num(1), num(2));
     Exp *e1 = apply(lambda("x", calc("+", str("x"), num(1))), num(1));
-
-    // 原因好像是 apply 接收的默认是 lambda, 而这个是 apply
-    Exp *e2 = apply(apply(lambda("x", lambda("y", calc("+", str("x"), str("y")))), num(1)), num(2)); // 这个现在好像还不支持嵌套 lambda
-
+    Exp *e2 = apply(apply(lambda("x", lambda("y", calc("+", str("x"), str("y")))), num(1)), num(2)); 
+    Exp *e3 = lambda("x", str("x"));
     Env ne;
     ne = init_env();
-    RESULT *re = interpreter(*e2, ne);
+    RESULT *re = interpreter(*e, ne);
     int result = result2int(*re);
     printf("%d", result);
     return 0;
