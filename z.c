@@ -7,9 +7,15 @@
 
 enum type { INT, STR, LAMBDA, THREE, APPLY, CLOSURE};
 
+typedef struct RE RESULT;
+
+void ignore(char *str) {
+    fprintf("%s", str);
+}
+
 typedef struct {
     char *var;
-    int val;
+    RESULT *val;
 } Pair;
 
 // [var val][var val][][]
@@ -34,8 +40,8 @@ Env init_env() {
     return env;
 }
 
-// extend_env :: char * -> int -> Env -> Env
-Env extend_env(char *var, int val, Env env) {
+// extend_env :: char * -> RESULT -> Env -> Env
+Env extend_env(char *var, RESULT *val, Env env) {
     Pair p;
     p.var = strdup(var);
     p.val = val;
@@ -50,8 +56,8 @@ void Error(char *p) {
     fprintf(stderr, p);
 }
 
-// lookup :: char * -> Env -> int
-int lookup(char *var, Env env) {
+// lookup :: char * -> Env -> RESULT
+RESULT* lookup(char *var, Env env) {
     int i;
     for (i = 0; i < env.length; i++) {
 	if (strcmp(env.p[i].var, var) == 0) {
@@ -129,7 +135,8 @@ Closure Close(char *arg, Exp *body, Env env) {
     return ce;
 }
  
-typedef struct {
+
+typedef struct RE {
     int type; // INT, CLOSURE
     union u2 {
 	int num;
@@ -150,49 +157,48 @@ int result2int(RESULT re) {
     return re.as.num;
 }
 // interpreter :: Exp -> Env -> RESULT
-RESULT interpreter(Exp exp, Env env) {
+RESULT *interpreter(Exp exp, Env env) {
+    RESULT *result = malloc (sizeof (RESULT));
     switch (exp.type) {
     case INT:
-	return (RESULT){INT, exp.as.num};
+	result->type = INT;
+	result->as.num = exp.as.num;
+	return result;
     case STR:
-	int val = lookup(exp.as.str, env);
-	return (RESULT){INT, val};
+	RESULT *val = lookup(exp.as.str, env);
+	return val;
     case LAMBDA:
-	RESULT rc;
-	rc.type = CLOSURE;
+	result->type = CLOSURE;
 	// Close :: char * -> Exp * -> Env -> Closure
-	rc.as.closure = Close(exp.as.lambda->arg, exp.as.lambda->body, env);
-	return rc;
+	result->as.closure = Close(exp.as.lambda->arg, exp.as.lambda->body, env);
+	return result;
     case THREE:
 	char *opt = exp.as.three->opt;
 	Exp *e1 = exp.as.three->b1;
 	Exp *e2 = exp.as.three->b2;
 	
-	RESULT v1 = interpreter(*e1, env);
-	RESULT v2 = interpreter(*e2, env);
+	RESULT *v1 = interpreter(*e1, env);
+	RESULT *v2 = interpreter(*e2, env);
 
 	char op = opt[0];
-	RESULT r;
+	result->type = INT;
 	switch (op) {
 	case '+':
-	    r.type = INT;
-	    r.as.num = v1.as.num + v2.as.num;
-	    return r;
+	    result->as.num = v1->as.num + v2->as.num;
+	    return result;
 
 	case '-':
-	    r.type = INT;
-	    r.as.num = v1.as.num - v2.as.num;
-	    return r;
+	    result->as.num = v1->as.num - v2->as.num;
+	    return result;
 	case '*':
-	    r.type = INT;
-	    r.as.num = v1.as.num * v2.as.num;
-	    return r;
+	    result->as.num = v1->as.num * v2->as.num;
+	    return result;
 	case '/':
-	    r.type = INT;
-	    r.as.num = (int)(v1.as.num / v2.as.num);
-	    return r;
+	    result->as.num = (int)(v1->as.num / v2->as.num);
+	    return result;
 	}
-	return (RESULT){INT, 0};
+	assert(1 == 2);
+	// return (RESULT){INT, 0};
     case APPLY:
 	/*
     case [fun, e]:
@@ -209,8 +215,8 @@ RESULT interpreter(Exp exp, Env env) {
 	// [fun body]
 	// fun -> closure
 	Exp apply_fun = lambda2exp(exp.as.apply->fun);
-	RESULT close_fun = interpreter(apply_fun, env);
-	Closure result_ce = result2closure(close_fun);
+	RESULT *close_fun = interpreter(apply_fun, env);
+	Closure result_ce = result2closure(*close_fun);
 	
 	char *x = closure_x (result_ce);
 	Exp *body = closure_body (result_ce);
@@ -218,10 +224,10 @@ RESULT interpreter(Exp exp, Env env) {
 
 	// 从 RESULT 转换成 int
 	// TODO 是这里的原因？导致无法嵌套 lambda?
-	RESULT ebody = interpreter(*(exp.as.apply->body), env); // ebody 可能是 INT，也可能是 ClOSURE
-	int ebody_val = result2int(ebody);
+	RESULT *ebody = interpreter(*(exp.as.apply->body), env); // ebody 可能是 INT，也可能是 ClOSURE
+	// int ebody_val = result2int(ebody);
 	// new_env = extend_env (arg, interpreter (e, env), env) 对不上
-	Env new_env = extend_env(x, ebody_val, oenv); // 这里不对
+	Env new_env = extend_env(x, ebody, oenv); // 这里不对
 	return interpreter(*body, new_env);
     default:
 	assert(1 == 2);
@@ -252,15 +258,20 @@ Exp* lambda(char *x, Exp *body) {
 }
 
 // apply :: Exp* -> Exp* -> Exp*
+// apply 的 lamb 可能接收的是另一个 apply
 Exp* apply(Exp *lamb, Exp *body) {
-    assert(lamb->type == LAMBDA);
-    APPLY_EXP *ae = malloc(sizeof (APPLY_EXP));
-    ae->fun = lamb->as.lambda;
-    ae->body = body;
-    Exp *a = malloc (sizeof (Exp));
-    a->type = APPLY;
-    a->as.apply = ae;
-    return a;
+    if (lamb->type == LAMBDA) {
+	APPLY_EXP *ae = malloc(sizeof (APPLY_EXP));
+	ae->fun = lamb->as.lambda;
+	ae->body = body;
+	Exp *a = malloc (sizeof (Exp));
+	a->type = APPLY;
+	a->as.apply = ae;
+	return a;
+    } else {
+	assert(lamb->type == APPLY);
+	ignore("IDONT KNOW");
+    }
 }
 
 // num :: int -> Exp*
@@ -295,8 +306,8 @@ int main() {
 
     Env ne;
     ne = init_env();
-    RESULT re = interpreter(*e2, ne);
-    int result = result2int(re);
+    RESULT *re = interpreter(*e2, ne);
+    int result = result2int(*re);
     printf("%d", result);
     return 0;
 }
