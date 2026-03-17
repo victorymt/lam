@@ -5,8 +5,9 @@
 enum type { INT, STR, LAMBDA, THREE, APPLY, CLOSURE};
 
 typedef struct RE RESULT;
-
-void ignore(char *str);
+typedef struct EXP Exp;
+typedef struct AE APPLY_EXP;
+typedef struct LE LAMBDA_EXP;
 
 typedef struct {
     char *var;
@@ -19,17 +20,6 @@ typedef struct {
     size_t capacity;
 } Env;
 
-int empty_envp(Env env);
-Env init_env(void);
-Env extend_env(char *var, RESULT *val, Env env);
-void Error(char *p);
-RESULT *lookup(char *var, Env env);
-
-typedef struct EXP Exp;
-
-typedef struct AE APPLY_EXP;
-
-typedef struct LE LAMBDA_EXP;
 
 typedef struct {
     char *opt;
@@ -66,11 +56,6 @@ typedef struct CE {
     Env env;
 } Closure;
 
-Exp *lambda2exp(LAMBDA_EXP *le);
-char *closure_x(Closure closure);
-Exp *closure_body(Closure closure);
-Env closure_env(Closure closure);
-Closure Close(char *arg, Exp *body, Env env);
 
 typedef struct RE {
     int type;
@@ -93,5 +78,19 @@ void pretty_print_three(THREE_EXP *e);
 void pretty_print_lambda(LAMBDA_EXP *le);
 void pretty_print(Exp *e);
 void print_closure(Closure closure);
+
+void ignore(char *str);
+int empty_envp(Env env);
+Env init_env(void);
+Env extend_env(char *var, RESULT *val, Env env);
+void Error(char *p);
+RESULT *lookup(char *var, Env env);
+
+Exp *lambda2exp(LAMBDA_EXP *le);
+char *closure_x(Closure closure);
+Exp *closure_body(Closure closure);
+Env closure_env(Closure closure);
+Closure Close(char *arg, Exp *body, Env env);
+
 
 #endif

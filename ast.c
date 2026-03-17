@@ -4,6 +4,7 @@
 #include <assert.h>
 #include "ast.h"
 
+// ignore :: char* -> IO
 void ignore(char *str) {
     fprintf(stderr, "%s", str);
 }
