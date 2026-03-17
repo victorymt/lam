@@ -43,7 +43,7 @@ Env init_env() {
 // extend_env :: char * -> RESULT -> Env -> Env
 Env extend_env(char *var, RESULT *val, Env env) {
     Pair p;
-    p.var = strdup(var);
+    p.var = var;
     p.val = val;
     Env new_env = env;
     new_env.p[new_env.length] = p;
@@ -143,7 +143,6 @@ Closure Close(char *arg, Exp *body, Env env) {
     ce.env = env;
     return ce;
 }
- 
 
 typedef struct RE {
     int type; // INT, CLOSURE
@@ -232,12 +231,8 @@ RESULT *interpreter(Exp exp, Env env) {
 	char *x = closure_x (result_ce);
 	Exp *body = closure_body (result_ce);
 	Env oenv = closure_env (result_ce);
-
-	// TODO 是这里的原因？导致无法嵌套 lambda?
-	RESULT *ebody = interpreter(*(exp.as.apply->body), env); // ebody 可能是 INT，也可能是 ClOSURE
-	// int ebody_val = result2int(ebody);
-	// new_env = extend_env (arg, interpreter (e, env), env) 对不上
-	Env new_env = extend_env(x, ebody, oenv); // 这里不对
+	RESULT *ebody = interpreter(*(exp.as.apply->body), env); 
+	Env new_env = extend_env(x, ebody, oenv); 
 	return interpreter(*body, new_env);
     default:
 	assert(1 == 2);
@@ -259,7 +254,7 @@ Exp *calc(char *opt, Exp *n1, Exp *n2) {
 // lambda :: char * -> Exp -> Exp*
 Exp* lambda(char *x, Exp *body) {
     LAMBDA_EXP *le = malloc (sizeof (LAMBDA_EXP));
-    le->arg = strdup(x);
+    le->arg = x;
     le->body = body;
     Exp *e = malloc (sizeof (Exp));
     e->type = LAMBDA;
@@ -302,7 +297,7 @@ Exp *num(int n) {
 Exp *str(char *x) {
     Exp *s = malloc(sizeof (Exp));
     s->type = STR;
-    s->as.str = strdup(x);
+    s->as.str = x;
     return s;
 }
 
@@ -352,6 +347,7 @@ void pretty_print(Exp *e) {
 	break;
     }
 }
+
 void print_closure(Closure closure) {
     char *x = closure_x(closure);
     Exp *body = closure_body(closure);
