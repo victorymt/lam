@@ -51,17 +51,3 @@ num_exp    : T_NUM { $$ = num($1); }
 id_exp     : T_ID { $$ = str($1); }
            ;
 %%
-
-int main() {
-    int r = yyparse();
-    if (r == 0) {
-	printf("Success\n");
-	Env ne;
-	ne = init_env();
-	RESULT *re = interpreter(*(Exp*)result, ne);
-	int result = result2int(*re);
-	printf("%d\n", result);
-	// printf("%d", result);
-	/* pretty_print(); */
-    }
-}
