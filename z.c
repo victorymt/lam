@@ -3,6 +3,7 @@
 #include <string.h>
 #include <assert.h>
 #include "ast.h"
+#include "constructor.h"
 
 int main() {
     Exp *e = calc("+", num(1), num(2));

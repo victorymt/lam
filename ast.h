@@ -1,6 +1,8 @@
 #ifndef Z_INTERPRETER_
 #define Z_INTERPRETER_
 
+#include <stddef.h>
+
 #define MAXSIZE 1024
 enum type { INT, STR, LAMBDA, THREE, APPLY, CLOSURE};
 
@@ -40,8 +42,8 @@ typedef struct LE {
 typedef struct EXP {
     int type;
     union u {
- int num;
-        char *str;
+	int num;
+	char *str;
         LAMBDA_EXP *lambda;
         THREE_EXP *three;
         APPLY_EXP *apply;
@@ -68,11 +70,6 @@ typedef struct RE {
 Closure result2closure(RESULT re);
 int result2int(RESULT re);
 RESULT *interpreter(Exp exp, Env env);
-Exp *calc(char *opt, Exp *n1, Exp *n2);
-Exp *lambda(char *x, Exp *body);
-Exp *apply(Exp *lamb, Exp *body);
-Exp *num(int n);
-Exp *str(char *x);
 void pretty_print_apply(APPLY_EXP *apply);
 void pretty_print_three(THREE_EXP *e);
 void pretty_print_lambda(LAMBDA_EXP *le);
