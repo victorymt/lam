@@ -102,17 +102,6 @@ int result2int(RESULT re) {
     return re.as.num;
 }
 
-// calc :: char * -> Exp* -> Exp* -> Exp
-Exp *calc(char *opt, Exp *n1, Exp *n2) {
-    THREE_EXP *nthree = malloc (sizeof (THREE_EXP));
-    nthree->opt = opt;
-    nthree->b1 = n1;
-    nthree->b2 = n2;
-    Exp *c = malloc (sizeof (Exp));
-    c->type = THREE;
-    c->as.three = nthree;
-    return c;
-}
 
 // 写一个友好的转换方式
 // Exp* c = calc("+", 1, 2);

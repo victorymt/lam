@@ -52,3 +52,15 @@ Exp *str(char *x) {
     s->as.str = x;
     return s;
 }
+
+// calc :: char * -> Exp* -> Exp* -> Exp
+Exp *calc(char *opt, Exp *n1, Exp *n2) {
+    THREE_EXP *nthree = malloc (sizeof (THREE_EXP));
+    nthree->opt = opt;
+    nthree->b1 = n1;
+    nthree->b2 = n2;
+    Exp *c = malloc (sizeof (Exp));
+    c->type = THREE;
+    c->as.three = nthree;
+    return c;
+}
