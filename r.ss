@@ -16,7 +16,7 @@
   (lambda (closure)
     (caddr closure)))
 
-(define entend-env
+(define extend-env
   (lambda (var val env)
     (cons
      (cons var val)
@@ -31,12 +31,23 @@
 	  (#t
 	   (lookup x (cdr env))))))
 
+;; ((v 1) (v2 2))
+(define extend-lst-env
+  (lambda (lst env)
+    (cond ((null? lst) env)
+	  ((= (length lst) 1)
+	   (extend-env (car (car lst)) (cadr (car lst)) env))
+	  (else
+	   (extend-lst-env (car lst) env)))))
+
 (define interpreter
   (lambda (exp env)
     (match exp
       [(? number? x) x]
       [(? symbol? x) (lookup x env)]
       [`(lambda (,x) ,body) (Closure x body env)]
+      [`(let ,xl ,body) (let ((new-env (extend-lst-env xl env)))
+			  (interpreter body new-env))]
       [`(,op ,e1 ,e2)
        (let ((v1 (interpreter e1 env))
 	     (v2 (interpreter e2 env)))
@@ -50,7 +61,7 @@
 	 (let ((arg (closure-x fun))
 	       (body (closure-body fun))
 	       (env (closure-env fun)))
-	   (let ((new-env (entend-env arg (interpreter e env) env)))
+	   (let ((new-env (extend-env arg (interpreter e env) env)))
 	     (interpreter body new-env))))])))
 
 (interpreter '(+ 1 2) '())
@@ -60,3 +71,9 @@
 		    (+ x y)))
 		1)
 	       2) '())
+
+(interpreter '(let ((x 1))
+		1) '())
+(interpreter '(let ((x 1))
+		((lambda (y)
+		   (+ y x)) 1)) '())
