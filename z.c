@@ -8,10 +8,10 @@
 
 extern void *result;
 int main() {
-    Exp *e = calc("+", num(1), num(2));
-    Exp *e1 = apply(lambda("x", calc("+", str("x"), num(1))), num(1));
-    Exp *e2 = apply(apply(lambda("x", lambda("y", calc("+", str("x"), str("y")))), num(1)), num(2)); 
-    Exp *e3 = lambda("x", str("x"));
+    // Exp *e = calc("+", num(1), num(2));
+    // Exp *e1 = apply(lambda("x", calc("+", str("x"), num(1))), num(1));
+    // Exp *e2 = apply(apply(lambda("x", lambda("y", calc("+", str("x"), str("y")))), num(1)), num(2)); 
+    // Exp *e3 = lambda("x", str("x"));
 
     // pretty_print(e2);
         int r = yyparse();

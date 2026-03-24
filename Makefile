@@ -4,4 +4,4 @@ lam: z.c constructor.c ast.c lam.y lam.l
 	gcc -o lam constructor.c ast.c y.tab.c lex.yy.c z.c
 
 clean:
-	rm lam
+	rm lam y.* lex.yy.c
