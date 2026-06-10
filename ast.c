@@ -4,81 +4,71 @@
 #include <assert.h>
 #include "ast.h"
 
-// ignore :: char* -> IO
-void ignore(char *str) {
-    fprintf(stderr, "%s", str);
-}
-
-// empty_envp :: Env -> int
-int empty_envp(Env env) {
-    return env.length == 0;
-}
+/* ═══════════════════ 环境操作 ═══════════════════ */
 
 // init_env :: () -> Env
-Env init_env() {
-    Env env;
-    memset(env.p, 0, sizeof (Pair) * MAXSIZE);
-    env.length = 0;
-    env.capacity = MAXSIZE;
-    return env;
+Env init_env(void) {
+    return NULL;
 }
 
 // extend_env :: char * -> RESULT -> Env -> Env
-Env extend_env(char *var, RESULT *val, Env env) {
-    Pair p;
-    p.var = var;
-    p.val = val;
-    Env new_env = env;
-    new_env.p[new_env.length] = p;
-    new_env.length++;
-    return new_env;
+// 创建一个新节点，strdup 持有 var，val 值拷贝，prev 指向旧 env
+Env extend_env(char *var, RESULT val, Env env) {
+    EnvNode *node = malloc(sizeof(EnvNode));
+    if (!node) { Error("out of memory\n"); exit(1); }
+    node->var = strdup(var);
+    node->val = val;
+    node->prev = env;
+    return node;
+}
+
+// lookup :: char * -> Env -> RESULT
+// 沿链表查找，找不到返回 RESULT_NONE
+RESULT lookup(char *var, Env env) {
+    for (Env cur = env; cur != NULL; cur = cur->prev) {
+        if (strcmp(cur->var, var) == 0) {
+            return cur->val;
+        }
+    }
+    Error("unknown symbol: ");
+    Error(var);
+    Error("\n");
+    return RESULT_NONE;
 }
 
 // Error :: char * -> IO
 void Error(char *p) {
-    fprintf(stderr, p);
+    fprintf(stderr, "%s", p);
 }
 
-// lookup :: char * -> Env -> RESULT
-RESULT* lookup(char *var, Env env) {
-    int i;
-    for (i = 0; i < env.length; i++) {
-	if (strcmp(env.p[i].var, var) == 0) {
-	    return env.p[i].val;
-	}
-    }
-    Error("unknown symbol!");
-}
+/* ═══════════════════ AST 包装 ═══════════════════ */
 
-// apply2exp :: APPLY_EXP* -> Exp
+// apply2exp :: APPLY_EXP* -> Exp*
 Exp *apply2exp(APPLY_EXP *ae) {
-    Exp *e = malloc (sizeof (Exp));
+    Exp *e = malloc(sizeof(Exp));
     e->type = APPLY;
     e->as.apply = ae;
     return e;
 }
 
-// lambda2exp :: LAMBDA_EXP* -> Exp
-Exp* lambda2exp(LAMBDA_EXP *le) {
-    Exp *e = malloc (sizeof (Exp));
+// lambda2exp :: LAMBDA_EXP* -> Exp*
+Exp *lambda2exp(LAMBDA_EXP *le) {
+    Exp *e = malloc(sizeof(Exp));
     e->type = LAMBDA;
     e->as.lambda = le;
     return e;
 }
 
+/* ═══════════════════ Closure 工具 ═══════════════════ */
+
 // closure_x :: Closure -> char *
-char *closure_x(Closure closure) {
-    return closure.x;
-}
+char *closure_x(Closure closure) { return closure.x; }
+
 // closure_body :: Closure -> Exp *
-Exp *closure_body(Closure closure) {
-    return closure.body;
-}
+Exp *closure_body(Closure closure) { return closure.body; }
 
 // closure_env :: Closure -> Env
-Env closure_env (Closure closure) {
-    return closure.env;
-}
+Env closure_env(Closure closure) { return closure.env; }
 
 // Close :: char * -> Exp * -> Env -> Closure
 Closure Close(char *arg, Exp *body, Env env) {
@@ -92,8 +82,7 @@ Closure Close(char *arg, Exp *body, Env env) {
 // result2closure :: RESULT -> Closure
 Closure result2closure(RESULT re) {
     assert(re.type == CLOSURE);
-    Closure ce = re.as.closure;
-    return ce;
+    return re.as.closure;
 }
 
 // result2int :: RESULT -> int
@@ -102,119 +91,116 @@ int result2int(RESULT re) {
     return re.as.num;
 }
 
+/* ═══════════════════ 解释器 ═══════════════════ */
 
-// 写一个友好的转换方式
-// Exp* c = calc("+", 1, 2);
-// Exp* p = lambda("x", calc("+", 1, 2));
-// Exp* a = apply(lambda("x", str("x")), 1);
-// Exp* i = num(1);
-// Exp* s = str("x")
+// interpreter :: Exp -> Env -> RESULT
+RESULT interpreter(Exp exp, Env env) {
+    switch (exp.type) {
+    case INT: {
+        RESULT r;
+        r.type = INT;
+        r.as.num = exp.as.num;
+        return r;
+    }
+    case STR: {
+        return lookup(exp.as.str, env);
+    }
+    case LAMBDA: {
+        RESULT r;
+        r.type = CLOSURE;
+        r.as.closure = Close(exp.as.lambda->arg,
+                             exp.as.lambda->body,
+                             env);
+        return r;
+    }
+    case THREE: {
+        char *opt = exp.as.three->opt;
+        Exp *e1 = exp.as.three->b1;
+        Exp *e2 = exp.as.three->b2;
 
-void pretty_print(Exp *e);
-void pretty_print_apply(APPLY_EXP *apply) {
-    pretty_print(apply->fun);
-    pretty_print(apply->body);
+        RESULT v1 = interpreter(*e1, env);
+        RESULT v2 = interpreter(*e2, env);
+
+        char op = opt[0];
+        RESULT r;
+        r.type = INT;
+        switch (op) {
+        case '+': r.as.num = v1.as.num + v2.as.num; return r;
+        case '-': r.as.num = v1.as.num - v2.as.num; return r;
+        case '*': r.as.num = v1.as.num * v2.as.num; return r;
+        case '/': r.as.num = v1.as.num / v2.as.num; return r;
+        default:
+            assert(0 && "unknown operator");
+        }
+        /* unreachable — suppress -Wimplicit-fallthrough */
+        return r;
+    }
+    case APPLY: {
+        RESULT close_fun = interpreter(*(exp.as.apply->fun), env);
+        Closure result_ce = result2closure(close_fun);
+
+        char *x    = closure_x(result_ce);
+        Exp *body  = closure_body(result_ce);
+        Env oenv   = closure_env(result_ce);
+        RESULT ebody = interpreter(*(exp.as.apply->body), env);
+
+        Env new_env = extend_env(x, ebody, oenv);
+        return interpreter(*body, new_env);
+    }
+    default:
+        assert(0 && "unknown exp type");
+    }
 }
 
-void pretty_print_three(THREE_EXP *e) {
-    printf("Opt: %s\n", e->opt);
-    pretty_print(e->b1);
-    pretty_print(e->b2);
+/* ═══════════════════ Pretty-print (S-表达式) ═══════════════════ */
+
+static void pretty_print_rec(Exp *e);
+
+static void pretty_print_apply(APPLY_EXP *apply) {
+    printf("(");
+    pretty_print_rec(apply->fun);
+    printf(" ");
+    pretty_print_rec(apply->body);
+    printf(")");
 }
 
-void pretty_print_lambda(LAMBDA_EXP *le) {
-    printf("Arg: %s\n", le->arg);
-    pretty_print(le->body);
+static void pretty_print_three(THREE_EXP *e) {
+    printf("(%s ", e->opt);
+    pretty_print_rec(e->b1);
+    printf(" ");
+    pretty_print_rec(e->b2);
+    printf(")");
+}
+
+static void pretty_print_lambda(LAMBDA_EXP *le) {
+    printf("(lambda (%s) ", le->arg);
+    pretty_print_rec(le->body);
+    printf(")");
+}
+
+static void pretty_print_rec(Exp *e) {
+    switch (e->type) {
+    case INT:
+        printf("%d", e->as.num);
+        break;
+    case STR:
+        printf("%s", e->as.str);
+        break;
+    case LAMBDA:
+        pretty_print_lambda(e->as.lambda);
+        break;
+    case THREE:
+        pretty_print_three(e->as.three);
+        break;
+    case APPLY:
+        pretty_print_apply(e->as.apply);
+        break;
+    default:
+        assert(0);
+    }
 }
 
 void pretty_print(Exp *e) {
-    switch (e->type) {
-    case INT:
-	printf("INT: %d\n", e->as.num);
-	break;
-    case STR:
-	printf("STR: %s\n", e->as.str);
-	break;
-    case LAMBDA:
-	pretty_print_lambda(e->as.lambda);
-	break;
-    case THREE:
-	pretty_print_three(e->as.three);
-	break;
-    case APPLY:
-	pretty_print_apply(e->as.apply);
-	break;
-    default:
-	assert(1 == 2);
-	break;
-    }
+    pretty_print_rec(e);
+    printf("\n");
 }
-
-void print_closure(Closure closure) {
-    char *x = closure_x(closure);
-    Exp *body = closure_body(closure);
-    Env env = closure_env(closure);
-    printf("%s\n", x);
-    pretty_print(body);
-}
-
-// interpreter :: Exp -> Env -> RESULT
-RESULT *interpreter(Exp exp, Env env) {
-    RESULT *result = malloc (sizeof (RESULT));
-    switch (exp.type) {
-    case INT:
-	result->type = INT;
-	result->as.num = exp.as.num;
-	return result;
-    case STR:
-	RESULT *val = lookup(exp.as.str, env);
-	return val;
-    case LAMBDA:
-	result->type = CLOSURE;
-	// Close :: char * -> Exp * -> Env -> Closure
-	result->as.closure = Close(exp.as.lambda->arg, exp.as.lambda->body, env);
-	return result;
-    case THREE:
-	char *opt = exp.as.three->opt;
-	Exp *e1 = exp.as.three->b1;
-	Exp *e2 = exp.as.three->b2;
-	
-	RESULT *v1 = interpreter(*e1, env);
-	RESULT *v2 = interpreter(*e2, env);
-
-	char op = opt[0];
-	result->type = INT;
-	switch (op) {
-	case '+':
-	    result->as.num = v1->as.num + v2->as.num;
-	    return result;
-
-	case '-':
-	    result->as.num = v1->as.num - v2->as.num;
-	    return result;
-	case '*':
-	    result->as.num = v1->as.num * v2->as.num;
-	    return result;
-	case '/':
-	    result->as.num = (int)(v1->as.num / v2->as.num);
-	    return result;
-	}
-	assert(1 == 2);
-	// return (RESULT){INT, 0};
-    case APPLY:
-
-	RESULT *close_fun = interpreter(*(exp.as.apply->fun), env);
-	Closure result_ce = result2closure(*close_fun);
-	
-	char *x = closure_x (result_ce);
-	Exp *body = closure_body (result_ce);
-	Env oenv = closure_env (result_ce);
-	RESULT *ebody = interpreter(*(exp.as.apply->body), env); 
-	Env new_env = extend_env(x, ebody, oenv); 
-	return interpreter(*body, new_env);
-    default:
-	assert(1 == 2);
-    }
-}
-
-

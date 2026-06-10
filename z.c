@@ -7,24 +7,24 @@
 #include "y.tab.h"
 
 extern void *result;
-int main() {
-    // Exp *e = calc("+", num(1), num(2));
-    // Exp *e1 = apply(lambda("x", calc("+", str("x"), num(1))), num(1));
-    // Exp *e2 = apply(apply(lambda("x", lambda("y", calc("+", str("x"), str("y")))), num(1)), num(2)); 
-    // Exp *e3 = lambda("x", str("x"));
 
-    // pretty_print(e2);
-        int r = yyparse();
+int main(void) {
+    int r = yyparse();
     if (r == 0) {
-	printf("Success\n");
-	Env ne;
-	ne = init_env();
-	pretty_print(result);
-	RESULT *re = interpreter(*(Exp*)result, ne);
-	assert(re->type == INT);
-	int result = result2int(*re);
-	printf("%d\n", result);
+        printf("Success\n");
+        Env ne = init_env();
+
+        printf("AST: ");
+        pretty_print((Exp *)result);
+
+        RESULT re = interpreter(*(Exp *)result, ne);
+        if (re.type == INT) {
+            printf("Result: %d\n", result2int(re));
+        } else if (re.type == CLOSURE) {
+            printf("Result: <closure>\n");
+        } else {
+            printf("Result: <error>\n");
+        }
     }
     return 0;
 }
-
